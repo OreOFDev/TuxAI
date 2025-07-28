@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tux AI – Minimal Glass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Markdown e Syntax Highlighting -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet" />
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            purple: {
+              50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff',
+              300: '#d8b4fe', 400: '#c084fc', 500: '#a855f7',
+              600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87',
+            },
+            gray: {
+              50: '#fafafa', 100: '#f4f4f5', 200: '#e4e4e7',
+              300: '#d4d4d8', 400: '#a1a1aa', 500: '#71717a',
+              600: '#52525b', 700: '#3f3f46', 800: '#27272a', 900: '#18181b',
+            }
+          },
+          fontFamily: { 
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Menlo', 'Courier', 'monospace']
+          },
+          animation: { 
+            'fade-in-up': 'fadeInUp .4s ease-out forwards',
+            'slide-in': 'slideIn 0.3s ease-out forwards',
+            'pulse-glow': 'pulseGlow 2s ease-in-out infinite alternate',
+            'shimmer': 'shimmer 2s linear infinite',
+            'bounce-subtle': 'bounceSubtle 0.6s ease-in-out'
+          },
+          keyframes: {
+            fadeInUp: {
+              '0%': { opacity: 0, transform: 'translateY(12px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
+            slideIn: {
+              '0%': { opacity: 0, transform: 'translateX(-20px)' },
+              '100%': { opacity: 1, transform: 'translateX(0)' },
+            },
+            pulseGlow: {
+              '0%': { boxShadow: '0 0 5px rgba(168, 85, 247, 0.4)' },
+              '100%': { boxShadow: '0 0 20px rgba(168, 85, 247, 0.8)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' }
+            },
+            bounceSubtle: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-2px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .glass { 
+      @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/40 dark:border-gray-700/40 shadow-2xl;
+    }
+    .chat-item {
+      @apply p-3 rounded-xl cursor-pointer transition-all duration-200 hover:bg-white/20 dark:hover:bg-gray-700/30 group relative;
+    }
+    .chat-item.active {
+      @apply bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30;
+    }
+    .chat-actions {
+      @apply absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1;
+    }
+    .typing-indicator {
+      @apply flex space-x-1;
+    }
+    .typing-dot {
+      @apply w-2 h-2 bg-gray-400 rounded-full animate-bounce;
+    }
+    .message-bubble {
+      @apply max-w-[90%] px-4 py-3 rounded-2xl text-sm shadow-lg transition-all duration-200 hover:shadow-xl animate-fade-in-up;
+    }
+    .user-message {
+      @apply bg-gradient-to-r from-purple-500 to-purple-600 text-white;
+    }
+    .bot-message {
+      @apply bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-gray-200 border border-gray-200/50 dark:border-gray-700/50;
+    }
+
+    /* Markdown Styles */
+    .markdown-content {
+      @apply text-sm leading-relaxed;
+    }
+    .markdown-content h1 {
+      @apply text-2xl font-bold mb-4 mt-6 text-gray-900 dark:text-gray-100;
+    }
+    .markdown-content h2 {
+      @apply text-xl font-bold mb-3 mt-5 text-gray-900 dark:text-gray-100;
+    }
+    .markdown-content h3 {
+      @apply text-lg font-semibold mb-2 mt-4 text-gray-900 dark:text-gray-100;
+    }
+    .markdown-content h4 {
+      @apply text-base font-semibold mb-2 mt-3 text-gray-900 dark:text-gray-100;
+    }
+    .markdown-content p {
+      @apply mb-3 text-gray-800 dark:text-gray-200;
+    }
+    .markdown-content ul, .markdown-content ol {
+      @apply mb-3 pl-6;
+    }
+    .markdown-content li {
+      @apply mb-1 text-gray-800 dark:text-gray-200;
+    }
+    .markdown-content ul li {
+      @apply list-disc;
+    }
+    .markdown-content ol li {
+      @apply list-decimal;
+    }
+    .markdown-content blockquote {
+      @apply border-l-4 border-purple-500 pl-4 py-2 mb-3 bg-purple-50 dark:bg-purple-900/20 text-gray-700 dark:text-gray-300 italic;
+    }
+    .markdown-content a {
+      @apply text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 underline;
+    }
+    .markdown-content strong {
+      @apply font-bold text-gray-900 dark:text-gray-100;
+    }
+    .markdown-content em {
+      @apply italic;
+    }
+    .markdown-content code:not([class*="language-"]) {
+      @apply bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-purple-600 dark:text-purple-400 border border-gray-200 dark:border-gray-700;
+    }
+    .markdown-content table {
+      @apply w-full border-collapse border border-gray-300 dark:border-gray-600 mb-4 rounded-lg overflow-hidden;
+    }
+    .markdown-content th, .markdown-content td {
+      @apply border border-gray-300 dark:border-gray-600 px-3 py-2 text-left;
+    }
+    .markdown-content th {
+      @apply bg-gray-100 dark:bg-gray-800 font-semibold;
+    }
+    .markdown-content hr {
+      @apply border-t border-gray-300 dark:border-gray-600 my-6;
+    }
+
+    /* Advanced Code Block Styles */
+    .code-block {
+      @apply relative mb-6 rounded-2xl overflow-hidden border border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 shadow-xl;
+      backdrop-filter: blur(10px);
+    }
+    
+    .code-header {
+      @apply flex items-center justify-between px-6 py-4 bg-gradient-to-r from-gray-100/80 to-gray-200/80 dark:from-gray-800/80 dark:to-gray-700/80 border-b border-gray-200/60 dark:border-gray-600/60;
+      backdrop-filter: blur(20px);
+    }
+    
+    .code-language {
+      @apply text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center space-x-3;
+    }
+    
+    .language-icon {
+      @apply w-6 h-6 p-1 rounded-lg flex items-center justify-center text-xs font-bold;
+    }
+    
+    .language-name {
+      @apply font-mono uppercase tracking-wider text-xs;
+    }
+    
+    .code-actions {
+      @apply flex items-center space-x-2;
+    }
+    
+    .copy-button {
+      @apply px-4 py-2 text-xs font-medium bg-white/80 dark:bg-gray-700/80 border border-gray-200/60 dark:border-gray-600/60 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 cursor-pointer flex items-center space-x-2 shadow-sm hover:shadow-md;
+      backdrop-filter: blur(10px);
+    }
+    
+    .copy-button:hover {
+      @apply scale-105 transform;
+    }
+    
+    .copy-button.copied {
+      @apply bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 shadow-green-200/50 dark:shadow-green-900/50;
+    }
+    
+    .code-content {
+      @apply relative overflow-x-auto;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    
+    .dark .code-content {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    
+    .code-content pre {
+      @apply !bg-transparent !m-0 p-6 font-mono text-sm leading-relaxed;
+      tab-size: 2;
+    }
+    
+    .code-content code {
+      @apply !bg-transparent font-mono;
+    }
+    
+    /* Line numbers styling */
+    .line-numbers .line-numbers-rows {
+      @apply border-r border-gray-300/50 dark:border-gray-600/50 pr-4 mr-4;
+    }
+    
+    .line-numbers-rows > span:before {
+      @apply text-gray-400 dark:text-gray-500 text-xs;
+    }
+
+    /* Language-specific icon colors */
+    .lang-javascript { @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400; }
+    .lang-typescript { @apply bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400; }
+    .lang-python { @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400; }
+    .lang-html { @apply bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400; }
+    .lang-css { @apply bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400; }
+    .lang-json { @apply bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-400; }
+    .lang-bash { @apply bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-400; }
+    .lang-sql { @apply bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400; }
+    .lang-jsx { @apply bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400; }
+    .lang-tsx { @apply bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400; }
+    .lang-php { @apply bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400; }
+    .lang-java { @apply bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400; }
+    .lang-go { @apply bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400; }
+    .lang-rust { @apply bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400; }
+    .lang-ruby { @apply bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400; }
+    .lang-swift { @apply bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400; }
+    .lang-kotlin { @apply bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400; }
+    .lang-dart { @apply bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400; }
+    .lang-text { @apply bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-400; }
+
+    /* Enhanced syntax highlighting */
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata {
+      @apply text-gray-500 dark:text-gray-400 italic;
+    }
+    
+    .token.punctuation {
+      @apply text-gray-600 dark:text-gray-300;
+    }
+    
+    .token.property,
+    .token.tag,
+    .token.boolean,
+    .token.number,
+    .token.constant,
+    .token.symbol,
+    .token.deleted {
+      @apply text-red-600 dark:text-red-400 font-medium;
+    }
+    
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted {
+      @apply text-green-600 dark:text-green-400;
+    }
+    
+    .token.operator,
+    .token.entity,
+    .token.url,
+    .language-css .token.string,
+    .style .token.string {
+      @apply text-yellow-600 dark:text-yellow-400;
+    }
+    
+    .token.atrule,
+    .token.attr-value,
+    .token.keyword {
+      @apply text-blue-600 dark:text-blue-400 font-semibold;
+    }
+    
+    .token.function,
+    .token.class-name {
+      @apply text-purple-600 dark:text-purple-400 font-medium;
+    }
+    
+    .token.regex,
+    .token.important,
+    .token.variable {
+      @apply text-orange-600 dark:text-orange-400;
+    }
+
+    /* Scrollbar styling */
+    .code-content::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .code-content::-webkit-scrollbar-track {
+      @apply bg-gray-100 dark:bg-gray-800 rounded-full;
+    }
+    
+    .code-content::-webkit-scrollbar-thumb {
+      @apply bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500;
+    }
+
+    /* Code block hover effects */
+    .code-block:hover {
+      @apply shadow-2xl;
+      transform: translateY(-1px);
+    }
+
+    /* Shimmer effect for copy button */
+    .copy-button.shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-100 font-sans">
+  
+  <!-- OVERLAY -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-30 hidden backdrop-blur-sm" onclick="closeDrawer()"></div>
+  
+  <!-- DRAWER -->
+  <aside id="drawer" class="fixed top-0 left-0 h-full w-80 glass z-40 -translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="flex items-center justify-between p-6 border-b border-white/20 dark:border-gray-700/30">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <span class="text-white font-bold text-lg">T</span>
+        </div>
+        <span class="font-bold text-xl text-gray-900 dark:text-gray-100">Tux AI</span>
+      </div>
+      <button onclick="closeDrawer()" class="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="p-4">
+      <button onclick="createChat()" class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>Nova Conversa</span>
+      </button>
+    </div>
+    
+    <nav id="chatList" class="flex-1 overflow-y-auto px-4 space-y-2 pb-4"></nav>
+  </aside>
+  
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 right-0 h-16 glass flex items-center justify-between px-6 z-20">
+    <button onclick="openDrawer()" class="text-2xl p-2 rounded-full hover:bg-white/20 dark:hover:bg-gray-700/30 transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+    <h1 class="font-bold text-xl bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">Tux AI</h1>
+    <button onclick="toggleDark()" class="text-2xl p-2 rounded-full hover:bg-white/20 dark:hover:bg-gray-700/30 transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+      </svg>
+    </button>
+  </header>
+  
+  <!-- CHAT -->
+  <main class="pt-20 pb-28 px-4 overflow-y-auto h-screen">
+    <div id="chat" class="max-w-6xl mx-auto space-y-4"></div>
+    <div id="welcomeMessage" class="max-w-6xl mx-auto text-center py-20">
+      <div class="w-20 h-20 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse-glow">
+        <span class="text-white font-bold text-2xl">T</span>
+      </div>
+      <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+        Olá! Eu sou o Tux AI
+      </h2>
+      <p class="text-gray-600 dark:text-gray-400 text-lg mb-8">
+        Como posso ajudá-lo hoje? Digite sua pergunta abaixo para começarmos.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto text-left">
+        <div class="p-6 rounded-2xl bg-white/50 dark:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-200">
+          <div class="text-2xl mb-3">💻</div>
+          <h3 class="font-semibold mb-2">Programação</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Ajudo com código, debugging e explicações técnicas</p>
+        </div>
+        <div class="p-6 rounded-2xl bg-white/50 dark:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-200">
+          <div class="text-2xl mb-3">📝</div>
+          <h3 class="font-semibold mb-2">Markdown</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Suporte completo a formatação e syntax highlighting</p>
+        </div>
+        <div class="p-6 rounded-2xl bg-white/50 dark:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-200">
+          <div class="text-2xl mb-3">🎨</div>
+          <h3 class="font-semibold mb-2">Design</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Interface moderna com blocos de código avançados</p>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- INPUT -->
+  <footer class="fixed bottom-0 left-0 right-0 glass z-20">
+    <div class="flex w-full max-w-6xl mx-auto p-4 space-x-3">
+      <div class="flex-1 relative">
+        <input id="inputMsg" type="text" placeholder="Digite sua mensagem..." 
+               class="w-full bg-white/50 dark:bg-gray-800/50 border border-white/30 dark:border-gray-700/30 rounded-2xl px-6 py-4 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 pr-14"/>
+        <div id="typingIndicator" class="absolute right-4 top-1/2 transform -translate-y-1/2 hidden">
+          <div class="typing-indicator">
+            <div class="typing-dot" style="animation-delay: 0ms"></div>
+            <div class="typing-dot" style="animation-delay: 150ms"></div>
+            <div class="typing-dot" style="animation-delay: 300ms"></div>
+          </div>
+        </div>
+      </div>
+      <button id="sendBtn" 
+              class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl w-14 h-14 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+        </svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL PARA RENOMEAR CHAT -->
+  <div id="renameModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+    <div class="glass rounded-2xl p-6 w-96 mx-4">
+      <h3 class="text-lg font-semibold mb-4">Renomear Conversa</h3>
+      <input id="renameInput" type="text" placeholder="Nome da conversa" 
+             class="w-full bg-white/50 dark:bg-gray-800/50 border border-white/30 dark:border-gray-700/30 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+      <div class="flex space-x-3">
+        <button onclick="cancelRename()" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+          Cancelar
+        </button>
+        <button onclick="confirmRename()" class="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2 px-4 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-colors">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* TOKEN */
+const token = 'eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1c2VyLWNlbnRlciIsImV4cCI6MTc1NTYzMDEwOSwiaWF0IjoxNzUzMDM4MTA5LCJqdGkiOiJkMXVqcTdkanFlZDk0MzM5cDU1ZyIsInR5cCI6ImFjY2VzcyIsImFwcF9pZCI6ImtpbWkiLCJzdWIiOiJkMXVqcTdkanFlZDk0MzM5cDU1MCIsInNwYWNlX2lkIjoiZDF1anE3ZGpxZWQ5NDMzOXA0djAiLCJhYnN0cmFjdF91c2VyX2lkIjoiZDF1anE3ZGpxZWQ5NDMzOXA0dWciLCJzc2lkIjoiMTczMTM3NDU3MjAxMTgzMDgxOCIsImRldmljZV9pZCI6Ijc1MjkyNDA5NTU5NTQ3MDU5MjQiLCJyZWdpb24iOiJvdmVyc2VhcyJ9._4LqIH9QbHde1ew0douFi9tqy_-1XlZB4SQpamc6f2j2Pf_5BOwHqbKovqqId4AgbuWFZG3Y9PTaul0U2c-AuQ';
+
+/* STORAGE */
+const USER_ID = localStorage.getItem('tux_user_id') || (localStorage.setItem('tux_user_id', 'tux_' + Math.random().toString(36).slice(2)), localStorage.getItem('tux_user_id'));
+const STORAGE_KEY = 'tux_chats_' + USER_ID;
+const loadChats = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+const saveChats = (list) => localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+
+let chats = loadChats();
+let activeChatId = null;
+let renamingChatId = null;
+
+/* DOM SHORTCUTS */
+const overlay = document.getElementById('overlay');
+const drawer = document.getElementById('drawer');
+const chatList = document.getElementById('chatList');
+const chatDiv = document.getElementById('chat');
+const inputMsg = document.getElementById('inputMsg');
+const sendBtn = document.getElementById('sendBtn');
+const welcomeMessage = document.getElementById('welcomeMessage');
+const typingIndicator = document.getElementById('typingIndicator');
+const renameModal = document.getElementById('renameModal');
+const renameInput = document.getElementById('renameInput');
+
+/* MARKDOWN CONFIGURATION */
+marked.setOptions({
+  highlight: function(code, lang) {
+    if (Prism.languages[lang]) {
+      return Prism.highlight(code, Prism.languages[lang], lang);
+    }
+    return code;
+  },
+  breaks: true,
+  gfm: true
+});
+
+/* ENHANCED MARKDOWN RENDERER */
+function renderMarkdown(text) {
+  const renderer = new marked.Renderer();
+  
+  renderer.code = function(code, language) {
+    const validLang = language && Prism.languages[language] ? language : 'text';
+    const highlightedCode = validLang !== 'text' ? 
+      Prism.highlight(code, Prism.languages[validLang], validLang) : 
+      code;
+    
+    const langInfo = getLanguageInfo(validLang);
+    const copyId = 'copy-' + Math.random().toString(36).substr(2, 9);
+    const lineCount = code.split('\n').length;
+    const showLineNumbers = lineCount > 3;
+    
+    return `
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-language">
+            <div class="language-icon ${langInfo.className}">
+              ${langInfo.icon}
+            </div>
+            <div>
+              <div class="language-name">${langInfo.name}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">${lineCount} linha${lineCount !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div class="code-actions">
+            <button class="copy-button" onclick="copyCode('${copyId}', this)">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <span>Copiar</span>
+            </button>
+          </div>
+        </div>
+        <div class="code-content">
+          <pre class="${showLineNumbers ? 'line-numbers' : ''}"><code id="${copyId}" class="language-${validLang}">${highlightedCode}</code></pre>
+        </div>
+      </div>
+    `;
+  };
+  
+  marked.use({ renderer });
+  return marked.parse(text);
+}
+
+function getLanguageInfo(lang) {
+  const languages = {
+    javascript: { name: 'JavaScript', icon: 'JS', className: 'lang-javascript' },
+    typescript: { name: 'TypeScript', icon: 'TS', className: 'lang-typescript' },
+    python: { name: 'Python', icon: 'PY', className: 'lang-python' },
+    html: { name: 'HTML', icon: 'HTML', className: 'lang-html' },
+    css: { name: 'CSS', icon: 'CSS', className: 'lang-css' },
+    json: { name: 'JSON', icon: '{}', className: 'lang-json' },
+    bash: { name: 'Bash', icon: '$', className: 'lang-bash' },
+    sql: { name: 'SQL', icon: 'SQL', className: 'lang-sql' },
+    jsx: { name: 'React JSX', icon: 'JSX', className: 'lang-jsx' },
+    tsx: { name: 'React TSX', icon: 'TSX', className: 'lang-tsx' },
+    php: { name: 'PHP', icon: 'PHP', className: 'lang-php' },
+    java: { name: 'Java', icon: 'JAVA', className: 'lang-java' },
+    cpp: { name: 'C++', icon: 'C++', className: 'lang-cpp' },
+    c: { name: 'C', icon: 'C', className: 'lang-c' },
+    go: { name: 'Go', icon: 'GO', className: 'lang-go' },
+    rust: { name: 'Rust', icon: 'RS', className: 'lang-rust' },
+    ruby: { name: 'Ruby', icon: 'RB', className: 'lang-ruby' },
+    swift: { name: 'Swift', icon: 'SW', className: 'lang-swift' },
+    kotlin: { name: 'Kotlin', icon: 'KT', className: 'lang-kotlin' },
+    dart: { name: 'Dart', icon: 'DART', className: 'lang-dart' },
+    yaml: { name: 'YAML', icon: 'YML', className: 'lang-yaml' },
+    xml: { name: 'XML', icon: 'XML', className: 'lang-xml' },
+    markdown: { name: 'Markdown', icon: 'MD', className: 'lang-markdown' },
+    text: { name: 'Text', icon: 'TXT', className: 'lang-text' }
+  };
+  
+  return languages[lang] || { name: 'Code', icon: 'CODE', className: 'lang-text' };
+}
+
+function copyCode(elementId, button) {
+  const codeElement = document.getElementById(elementId);
+  const text = codeElement.textContent;
+  
+  navigator.clipboard.writeText(text).then(() => {
+    const originalContent = button.innerHTML;
+    button.classList.add('copied', 'shimmer');
+    button.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      <span>Copiado!</span>
+    `;
+    
+    // Add bounce animation
+    button.classList.add('animate-bounce-subtle');
+    
+    setTimeout(() => {
+      button.classList.remove('copied', 'shimmer', 'animate-bounce-subtle');
+      button.innerHTML = originalContent;
+    }, 2000);
+  }).catch(() => {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    
+    const originalContent = button.innerHTML;
+    button.classList.add('copied');
+    button.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      <span>Copiado!</span>
+    `;
+    
+    setTimeout(() => {
+      button.classList.remove('copied');
+      button.innerHTML = originalContent;
+    }, 2000);
+  });
+}
+
+/* THEME */
+const toggleDark = () => {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+};
+
+if (localStorage.getItem('theme') === 'light') {
+  document.documentElement.classList.remove('dark');
+}
+
+/* DRAWER */
+const openDrawer = () => { 
+  drawer.classList.remove('-translate-x-full'); 
+  overlay.classList.remove('hidden'); 
+};
+
+const closeDrawer = () => { 
+  drawer.classList.add('-translate-x-full'); 
+  overlay.classList.add('hidden'); 
+};
+
+/* MODAL FUNCTIONS */
+const openRenameModal = (chatId) => {
+  renamingChatId = chatId;
+  const chat = chats.find(c => c.id === chatId);
+  renameInput.value = chat.name || 'Conversa';
+  renameModal.classList.remove('hidden');
+  renameInput.focus();
+  renameInput.select();
+};
+
+const cancelRename = () => {
+  renameModal.classList.add('hidden');
+  renamingChatId = null;
+};
+
+const confirmRename = () => {
+  const newName = renameInput.value.trim();
+  if (newName && renamingChatId) {
+    const chat = chats.find(c => c.id === renamingChatId);
+    chat.name = newName;
+    saveChats(chats);
+    renderList();
+  }
+  cancelRename();
+};
+
+const deleteChat = (chatId) => {
+  if (confirm('Tem certeza que deseja excluir esta conversa?')) {
+    chats = chats.filter(c => c.id !== chatId);
+    saveChats(chats);
+    
+    if (activeChatId === chatId) {
+      activeChatId = chats.length > 0 ? chats[0].id : null;
+    }
+    
+    if (chats.length === 0) {
+      createChat();
+    } else {
+      render();
+    }
+  }
+};
+
+/* RENDER */
+function renderList() {
+  chatList.innerHTML = '';
+  chats.forEach((c, index) => {
+    const div = document.createElement('div');
+    div.className = `chat-item ${c.id === activeChatId ? 'active' : ''}`;
+    
+    const chatName = document.createElement('div');
+    chatName.className = 'pr-16 font-medium truncate';
+    chatName.textContent = c.name || 'Conversa';
+    
+    const actions = document.createElement('div');
+    actions.className = 'chat-actions';
+    
+    const renameBtn = document.createElement('button');
+    renameBtn.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+      </svg>
+    `;
+    renameBtn.className = 'p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors';
+    renameBtn.onclick = (e) => {
+      e.stopPropagation();
+      openRenameModal(c.id);
+    };
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+      </svg>
+    `;
+    deleteBtn.className = 'p-1 rounded hover:bg-red-200 dark:hover:bg-red-600 transition-colors text-red-500';
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      deleteChat(c.id);
+    };
+    
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
+    
+    div.appendChild(chatName);
+    div.appendChild(actions);
+    
+    div.onclick = () => { 
+      activeChatId = c.id; 
+      render(); 
+      closeDrawer(); 
+    };
+    
+    chatList.appendChild(div);
+  });
+}
+
+function renderChat() {
+  chatDiv.innerHTML = '';
+  const chat = chats.find(c => c.id === activeChatId);
+  
+  if (!chat) {
+    welcomeMessage.style.display = 'block';
+    return;
+  }
+  
+  welcomeMessage.style.display = 'none';
+  chat.messages.forEach(m => appendMsg(m.text, m.from, false));
+}
+
+function appendMsg(text, from = 'bot', save = true) {
+  welcomeMessage.style.display = 'none';
+  
+  const wrapper = document.createElement('div');
+  wrapper.className = from === 'user' ? 'flex justify-end' : 'flex justify-start';
+  
+  const bubble = document.createElement('div');
+  bubble.className = `message-bubble ${from === 'user' ? 'user-message' : 'bot-message'}`;
+  
+  if (from === 'bot') {
+    // Render markdown for bot messages
+    const markdownContent = document.createElement('div');
+    markdownContent.className = 'markdown-content';
+    markdownContent.innerHTML = renderMarkdown(text);
+    bubble.appendChild(markdownContent);
+  } else {
+    // Plain text for user messages
+    bubble.textContent = text;
+  }
+  
+  wrapper.appendChild(bubble);
+  chatDiv.appendChild(wrapper);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+  
+  if (save && activeChatId) {
+    const chat = chats.find(c => c.id === activeChatId);
+    if (chat) {
+      chat.messages.push({ text, from });
+      saveChats(chats);
+    }
+  }
+}
+
+/* CHAT OPS */
+function createChat() {
+  const id = 'chat_' + Date.now();
+  const newChat = { 
+    id, 
+    name: 'Nova Conversa', 
+    messages: [], 
+    kimiChatId: null 
+  };
+  
+  chats.unshift(newChat);
+  saveChats(chats);
+  activeChatId = id;
+  render();
+  closeDrawer();
+}
+
+async function createRemoteChat() {
+  try {
+    const resp = await fetch('https://www.kimi.com/api/chat', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': 'Bearer ' + token 
+      },
+      body: JSON.stringify({ 
+        name: 'Tux Chat', 
+        born_from: 'home', 
+        kimiplus_id: 'kimi', 
+        source: 'web' 
+      })
+    });
+    const data = await resp.json();
+    return data.id;
+  } catch (error) {
+    console.error('Erro ao criar chat remoto:', error);
+    return null;
+  }
+}
+
+async function sendMsg(text) {
+  if (!activeChatId) {
+    createChat();
+  }
+  
+  let chat = chats.find(c => c.id === activeChatId);
+  
+  // Atualizar nome do chat com base na primeira mensagem
+  if (chat.messages.length === 0) {
+    chat.name = text.length > 30 ? text.substring(0, 30) + '...' : text;
+    saveChats(chats);
+    renderList();
+  }
+  
+  if (!chat.kimiChatId) {
+    chat.kimiChatId = await createRemoteChat();
+    if (!chat.kimiChatId) {
+      appendMsg('Erro ao conectar com o servidor. Tente novamente.', 'bot');
+      return;
+    }
+    saveChats(chats);
+  }
+  
+  appendMsg(text, 'user');
+  
+  // Mostrar indicador de digitação
+  typingIndicator.classList.remove('hidden');
+  sendBtn.disabled = true;
+  inputMsg.disabled = true;
+  
+  try {
+    const body = { 
+      model: 'k2', 
+      messages: [{ role: 'user', content: text }], 
+      temperature: 0.8, 
+      stream: true 
+    };
+    
+    const resp = await fetch(`https://www.kimi.com/api/chat/${chat.kimiChatId}/completion/stream`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Accept': 'text/event-stream', 
+        'Authorization': 'Bearer ' + token 
+      },
+      body: JSON.stringify(body)
+    });
+    
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '', bot = '';
+    
+    // Esconder indicador de digitação e adicionar mensagem vazia
+    typingIndicator.classList.add('hidden');
+    appendMsg('', 'bot');
+    const lastBubble = chatDiv.lastChild.querySelector('.message-bubble .markdown-content');
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n'); 
+      buffer = lines.pop();
+      
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const data = JSON.parse(line.slice(5));
+          if (data.event === 'cmpl' && data.text) { 
+            bot += data.text; 
+            if (lastBubble) {
+              lastBubble.innerHTML = renderMarkdown(bot);
+            }
+            chatDiv.scrollTop = chatDiv.scrollHeight; 
+          }
+          if (data.event === 'done') { 
+            chat.messages.push({ text: bot, from: 'bot' }); 
+            saveChats(chats); 
+            break; 
+          }
+        } catch (e) {
+          console.error('Erro ao processar resposta:', e);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao enviar mensagem:', error);
+    typingIndicator.classList.add('hidden');
+    appendMsg('Erro ao enviar mensagem. Tente novamente.', 'bot');
+  } finally {
+    sendBtn.disabled = false;
+    inputMsg.disabled = false;
+    inputMsg.focus();
+  }
+}
+
+/* EVENTS */
+sendBtn.onclick = () => {
+  const text = inputMsg.value.trim();
+  if (text) { 
+    sendMsg(text); 
+    inputMsg.value = ''; 
+  }
+};
+
+inputMsg.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+
+renameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    confirmRename();
+  } else if (e.key === 'Escape') {
+    cancelRename();
+  }
+});
+
+/* INIT */
+function render() { 
+  renderList(); 
+  renderChat(); 
+}
+
+// Inicialização
+render();
+
+// Criar chat inicial se não houver nenhum
+if (chats.length === 0) {
+  createChat();
+} else if (!activeChatId) {
+  activeChatId = chats[0].id;
+  render();
+}
+
+// Focar no input automaticamente
+inputMsg.focus();
+</script>
+
+</body>
+</html>
